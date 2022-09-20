@@ -25,33 +25,26 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-int main(void)
-{
-	uint32_t msg = 0b10101001110111011100101010000000;
+int main(void) {
+	uint32_t msg = 0b10101001110111011100101010000000; // my message
 
 	// GPIO init
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 	GPIOA->MODER |= GPIO_MODER_MODER5_0;
 
 	// Infinite loop
-	while(1){
-		for(uint8_t idx = 31; idx != 0; idx--)
+	while (1) {
+		for (uint8_t idx = 31; idx != 0; idx--)
 		{
-			uint8_t my_bit = 1UL & msg>>idx; // separe bit from message
-			if (my_bit){
+			uint8_t my_bit = 1UL & (msg>>idx); // separe bit from message
+			if (my_bit) {
 				GPIOA->BSRR = (1<<LED_PIN); // ON
 			} else {
 				GPIOA->BRR = (1<<LED_PIN); // OF
 			}
 
 			for (volatile uint32_t i = 0; i < 100000; i++) {} // wait
-		}
+		} // for (uint8_t idx = 31; idx != 0; idx--)
+	} // while (1)
 
-	}
-
-	while (1){
-		GPIOA->ODR ^= (1<<LED_PIN); // toggle
-
-	}
-
-}
+} // int main(void)
