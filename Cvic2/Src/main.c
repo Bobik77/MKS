@@ -19,16 +19,38 @@
 #include <stdint.h>
 #include <stm32f0xx.h>
 
-#define LED1_bit (1<<4) //PA4
-#define LED2_bit (1<<0)//PB0
+/* DEFINITIONS */
+#define LED1_BIT (1<<4) //PA4
+#define LED2_BIT (1<<0)//PB0
 #define S1 PC1
 #define S2 PC0 // EXTI0
+
+#define LED_TIME_BLINK 300 //ms
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
+/* GLOBAL VARIABLES DECLARATION */
+volatile uint32_t Tick;
+
+
+/* USER FUNCTIONS */
+//LED1 blinker
+void blikac(void) {
+	static uint32_t delay;
+
+	if (Tick > delay + LED_TIME_BLINK) {
+		GPIOA->ODR ^= LED1_BIT;
+		delay = Tick;
+	}
+ }
+
+
+/* MAIN CODE */
 int main(void) {
+	// SysTick init
+	SysTick_Config(8000); // 1ms, 8MHz clk
 
 	// PORT init
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN; // enable ports clock
@@ -47,18 +69,26 @@ int main(void) {
 	NVIC_EnableIRQ(EXTI0_1_IRQn); // enable EXTI0_1
 
 
-	while(1){}
+	while(1) {
+		blikac();
+	} // while(1)
 
 } // int main(void)
 
 
+/* INT HANDLERS */
+//SysTicker increment
+void SysTick_Handler(void) {
+	Tick++;
+ }
 
-// ext. interrupt on S1 button
+
+// interrupt on S1 button
 void EXTI0_1_IRQHandler(void) {
 	if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
 		EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
 
-	// toogle LED2
-	GPIOB->ODR ^= LED2_bit;
+	// Toggle LED2
+	GPIOB->ODR ^= LED2_BIT;
 	}
  }
