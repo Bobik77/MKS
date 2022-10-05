@@ -28,7 +28,7 @@
 #define LED_TIME_BLINK 300 //ms
 #define LED_TIME_SHORT 100 //ms
 #define LED_TIME_LONG 1000 //ms
-#define BUTTON_REFRESH_TIME 40 //ms
+#define BUTTON_REFRESH_TIME 4 //ms
 
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
@@ -54,9 +54,36 @@ void blikac(void) {
 void tlacitka(void) {
 	static uint32_t off_time;
 	static uint32_t delay;
-	static uint32_t old_s1;
-	static uint32_t old_s2;
+	//static uint32_t old_s1;
+	//static uint32_t old_s2;
 
+	static uint16_t debounce_s1 = 0xFFFF;
+	static uint16_t debounce_s2 = 0xFFFF;
+
+	// sample everz 4ms
+	if (Tick > delay + BUTTON_REFRESH_TIME) {
+			delay = Tick;
+
+			// S1 debounce
+			debounce_s1 <<= 1;
+			if (GPIOC->IDR & S1_BIT) debounce_s1 |= 0x0001;
+			if (debounce_s1 == 0x8000) {
+				// S1 operation
+				off_time = Tick + LED_TIME_LONG;
+				GPIOB->BSRR = LED2_BIT; // LED2 on
+			}
+
+			// S2 debounce
+			debounce_s2 <<= 1;
+			if (GPIOC->IDR & S2_BIT) debounce_s2 |= 0x0001;
+			if (debounce_s2 == 0x8000) {
+				// S2 operation
+				off_time = Tick + LED_TIME_SHORT;
+				GPIOB->BSRR = LED2_BIT; // LED2 on
+			}
+	}
+
+	/*
 	// sample buttons every 40ms
 	if (Tick > delay + BUTTON_REFRESH_TIME) {
 		delay = Tick;
@@ -76,7 +103,7 @@ void tlacitka(void) {
 		}
 		old_s1 = new_s1;  // store actual value
 		old_s2 = new_s2;
-	}
+	} */
 
 	if (Tick > off_time) {
 		GPIOB->BRR = LED2_BIT; // LED2 off
