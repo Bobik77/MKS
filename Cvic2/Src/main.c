@@ -19,32 +19,46 @@
 #include <stdint.h>
 #include <stm32f0xx.h>
 
-#define LED_PIN 5
+#define LED1_bit (1<<4) //PA4
+#define LED2_bit (1<<0)//PB0
+#define S1 PC1
+#define S2 PC0 // EXTI0
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
 int main(void) {
-	uint32_t msg = 0b10101001110111011100101010000000; // my message
 
-	// GPIO init
-	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-	GPIOA->MODER |= GPIO_MODER_MODER5_0;
+	// PORT init
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN; // enable ports clock
+	GPIOA->MODER |= GPIO_MODER_MODER4_0; // LED1 = PA4, output
+	GPIOB->MODER |= GPIO_MODER_MODER0_0; // LED2 = PB0, output
+	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
+	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
 
-	// Infinite loop
-	while (1) {
-		for (uint8_t idx = 31; idx != 0; idx--)
-		{
-			uint8_t my_bit = 1UL & (msg>>idx); // separe bit from message
-			if (my_bit) {
-				GPIOA->BSRR = (1<<LED_PIN); // ON
-			} else {
-				GPIOA->BRR = (1<<LED_PIN); // OF
-			}
+	// System configuration cntrl clk en
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
-			for (volatile uint32_t i = 0; i < 100000; i++) {} // wait
-		} // for (uint8_t idx = 31; idx != 0; idx--)
-	} // while (1)
+	// Ext. interrupt init
+	SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
+	EXTI->IMR |= EXTI_IMR_MR0; // mask
+	EXTI->FTSR |= EXTI_FTSR_TR0; // trigger on falling edge
+	NVIC_EnableIRQ(EXTI0_1_IRQn); // enable EXTI0_1
+
+
+	while(1){}
 
 } // int main(void)
+
+
+
+// ext. interrupt on S1 button
+void EXTI0_1_IRQHandler(void) {
+	if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
+		EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
+
+	// toogle LED2
+	GPIOB->ODR ^= LED2_bit;
+	}
+ }
