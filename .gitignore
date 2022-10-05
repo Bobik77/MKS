@@ -51,6 +51,8 @@ Module.symvers
 Mkfile.old
 dkms.conf
 /Cvic1/CMSIS
+/Cvic2/CMSIS
 /Cvic1/Debug
 /Cvic1/.settings
 /.metadata
+/CMSIS
