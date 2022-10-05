@@ -20,20 +20,29 @@
 #include <stm32f0xx.h>
 
 /* DEFINITIONS */
+// LED1
 #define LED1_BIT (1<<4) //PA4
-#define LED2_BIT (1<<0)//PB0
+#define LED1_PORT GPIOA
+// LED2
+#define LED2_BIT (1<<0) //PB0
+#define LED2_PORT GPIOB
+// S1 button
 #define S1_BIT (1<<1) //PC1
+#define S1_PORT GPIOC
+// S2 button
 #define S2_BIT (1<<0) //PC0, EXTI0
+#define S2_PORT GPIOC
 
+//Tick times
 #define LED_TIME_BLINK 300 //ms
 #define LED_TIME_SHORT 100 //ms
 #define LED_TIME_LONG 1000 //ms
 #define BUTTON_REFRESH_TIME 4 //ms
 
-
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
+
 
 /* GLOBAL VARIABLES DECLARATION */
 volatile uint32_t Tick;
@@ -45,7 +54,7 @@ void blikac(void) {
 	static uint32_t delay;
 
 	if (Tick > delay + LED_TIME_BLINK) {
-		GPIOA->ODR ^= LED1_BIT;
+		LED1_PORT->ODR ^= LED1_BIT;
 		delay = Tick;
 	}
  }
@@ -54,59 +63,59 @@ void blikac(void) {
 void tlacitka(void) {
 	static uint32_t off_time;
 	static uint32_t delay;
-	//static uint32_t old_s1;
-	//static uint32_t old_s2;
+	//static uint16_t old_s1;
+	//static uint16_t old_s2;
 
 	static uint16_t debounce_s1 = 0xFFFF;
 	static uint16_t debounce_s2 = 0xFFFF;
 
-	// sample everz 4ms
+	// sample every 4ms
 	if (Tick > delay + BUTTON_REFRESH_TIME) {
 			delay = Tick;
 
 			// S1 debounce
 			debounce_s1 <<= 1;
-			if (GPIOC->IDR & S1_BIT) debounce_s1 |= 0x0001;
+			if (S1_PORT->IDR & S1_BIT) debounce_s1 |= 0x0001;
 			if (debounce_s1 == 0x8000) {
 				// S1 operation
 				off_time = Tick + LED_TIME_LONG;
-				GPIOB->BSRR = LED2_BIT; // LED2 on
+				LED2_PORT->BSRR = LED2_BIT; // LED2 on
 			}
 
 			// S2 debounce
 			debounce_s2 <<= 1;
-			if (GPIOC->IDR & S2_BIT) debounce_s2 |= 0x0001;
+			if (S2_PORT->IDR & S2_BIT) debounce_s2 |= 0x0001;
 			if (debounce_s2 == 0x8000) {
 				// S2 operation
 				off_time = Tick + LED_TIME_SHORT;
-				GPIOB->BSRR = LED2_BIT; // LED2 on
+				LED2_PORT->BSRR = LED2_BIT; // LED2 on
 			}
 	}
 
-	/*
+	/*//
 	// sample buttons every 40ms
 	if (Tick > delay + BUTTON_REFRESH_TIME) {
 		delay = Tick;
 		//read buttons
-		uint32_t new_s2 = GPIOC->IDR & S2_BIT;
-		uint32_t new_s1 = GPIOC->IDR & S1_BIT;
+		uint16_t new_s2 = S2_PORT->IDR & S2_BIT;
+		uint16_t new_s1 = S2_PORT->IDR & S1_BIT;
 
 		// short blink
 		if (old_s2 && !new_s2) { // falling edge
 			off_time = Tick + LED_TIME_SHORT;
-			GPIOB->BSRR = LED2_BIT; // LED2 on
+			LED2_PORT->BSRR = LED2_BIT; // LED2 on
 		}
 		// long blink
 		if (old_s1 && !new_s1) { // falling edge
 			off_time = Tick + LED_TIME_LONG;
-			GPIOB->BSRR = LED2_BIT; // LED2 on
+			LED2_PORT->BSRR = LED2_BIT; // LED2 on
 		}
 		old_s1 = new_s1;  // store actual value
 		old_s2 = new_s2;
 	} */
 
 	if (Tick > off_time) {
-		GPIOB->BRR = LED2_BIT; // LED2 off
+		LED2_PORT->BRR = LED2_BIT; // LED2 off
 	}
 
 }
@@ -119,12 +128,12 @@ int main(void) {
 
 	// PORT init
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN; // enable ports clock
-	GPIOA->MODER |= GPIO_MODER_MODER4_0; // LED1 = PA4, output
-	GPIOB->MODER |= GPIO_MODER_MODER0_0; // LED2 = PB0, output
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
-	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
+	LED1_PORT->MODER |= GPIO_MODER_MODER4_0; // LED1 = PA4, output
+	LED2_PORT->MODER |= GPIO_MODER_MODER0_0; // LED2 = PB0, output
+	S1_PORT->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
+	S2_PORT->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
 
-	// System configuration cntrl clk en
+	// System configuration controller clk en
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
 	// Ext. interrupt init
@@ -148,13 +157,12 @@ void SysTick_Handler(void) {
 	Tick++;
 }
 
-
 // interrupt on S1 button
 void EXTI0_1_IRQHandler(void) {
 	if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
 		EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
 
 	// Toggle LED2
-	//GPIOB->ODR ^= LED2_BIT;
+	//LED2_BIT->ODR ^= LED2_BIT;
 	}
- }
+}
