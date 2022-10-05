@@ -71,25 +71,25 @@ void tlacitka(void) {
 
 	// sample every 4ms
 	if (Tick > delay + BUTTON_REFRESH_TIME) {
-			delay = Tick;
+		delay = Tick;
 
-			// S1 debounce
-			debounce_s1 <<= 1;
-			if (S1_PORT->IDR & S1_BIT) debounce_s1 |= 0x0001;
-			if (debounce_s1 == 0x8000) {
-				// S1 operation
-				off_time = Tick + LED_TIME_LONG;
-				LED2_PORT->BSRR = LED2_BIT; // LED2 on
-			}
+		// S1 debounce
+		debounce_s1 <<= 1;
+		if (S1_PORT->IDR & S1_BIT) debounce_s1 |= 0x0001;
+		if (debounce_s1 == 0x8000) {
+			// S1 operation
+			off_time = Tick + LED_TIME_LONG;
+			LED2_PORT->BSRR = LED2_BIT; // LED2 on
+		}
 
-			// S2 debounce
-			debounce_s2 <<= 1;
-			if (S2_PORT->IDR & S2_BIT) debounce_s2 |= 0x0001;
-			if (debounce_s2 == 0x8000) {
-				// S2 operation
-				off_time = Tick + LED_TIME_SHORT;
-				LED2_PORT->BSRR = LED2_BIT; // LED2 on
-			}
+		// S2 debounce
+		debounce_s2 <<= 1;
+		if (S2_PORT->IDR & S2_BIT) debounce_s2 |= 0x0001;
+		if (debounce_s2 == 0x8000) {
+			// S2 operation
+			off_time = Tick + LED_TIME_SHORT;
+			LED2_PORT->BSRR = LED2_BIT; // LED2 on
+		}
 	}
 
 	/*//
@@ -162,7 +162,7 @@ void EXTI0_1_IRQHandler(void) {
 	if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
 		EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
 
-	// Toggle LED2
-	//LED2_BIT->ODR ^= LED2_BIT;
+		// Toggle LED2
+		//LED2_BIT->ODR ^= LED2_BIT;
 	}
 }
