@@ -5,3 +5,4 @@ Debug
 /Cvic3/*.ld
 *.resources
 .metadata
+/cvic5/*.ld
