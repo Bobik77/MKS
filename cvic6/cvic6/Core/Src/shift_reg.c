@@ -103,7 +103,7 @@ void sct_value_point(uint16_t value, uint8_t point) {
 
 	if (point != 0) {
 		for (uint8_t i = 0; i<3; i++) {
-			if ((point>>i) & 1 == 1) {
+			if (( (point>>i) & 1) == 1) {
 				reg |= dec_points_values[i];
 			}
 		}

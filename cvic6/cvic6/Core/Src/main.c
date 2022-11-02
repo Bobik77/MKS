@@ -34,6 +34,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SEC_DEC_POINT 0x02
+#define DISP_T_REFRESH 1000
+#define BUTTON_S1 (1<<0)
+#define BUTTON_S2 (1<<1)
+#define BUTTON_REFRESH_TIME 2 //ms
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,6 +61,36 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC_Init(void);
 /* USER CODE BEGIN PFP */
 
+uint8_t read_buttons(void) {
+	static uint32_t delay;
+
+	static uint16_t debounce_s1 = 0xFFFF;
+	static uint16_t debounce_s2 = 0xFFFF;
+	static uint32_t pushed_buttons = 0;
+
+	// sample every 4ms
+	if (HAL_GetTick() >= delay + BUTTON_REFRESH_TIME) {
+		delay = HAL_GetTick();
+		pushed_buttons = 0;
+
+		// S1 debounce
+		debounce_s1 <<= 1;
+		if (HAL_GPIO_ReadPin(S1_GPIO_Port, S1_Pin)) debounce_s1 |= 0x0001;
+		if (debounce_s1 == 0x8000 || debounce_s1 == 0) {
+			// S1 operation
+			pushed_buttons |= BUTTON_S1; // active on push and hold
+		}
+
+		// S2 debounce
+		debounce_s2 <<= 1;
+		if (HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin)) debounce_s2 |= 0x0001;
+		if (debounce_s2 == 0x8000 || debounce_s2 == 0) {
+			// S2 operation
+			pushed_buttons |= BUTTON_S2; // actiove on push and hold
+		}
+	}
+	return pushed_buttons;
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -110,22 +144,46 @@ int main(void)
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		/*
-	  HAL_Delay(CONVERT_T_DELAY);
-	  int16_t temp_18b20;
-	  OWReadTemperature(&temp_18b20);
-	  temp_18b20 /= 10; //rotate right one digit
-	  //TODO round correction
-	  sct_value(temp_18b20);
-	  //HAL_Delay(300);
-	  ///sct_value(0);
-		 * */
+		static enum {NTC, DS18} state = NTC;
+		static uint32_t lastMeasTicks = 0;
+		static uint32_t lastDispTicks = 0;
+		static int16_t temp_18b20;
+		static int16_t temp_ntc;
 
-		HAL_Delay(CONVERT_T_DELAY);
-		uint16_t raw = HAL_ADC_GetValue(&hadc);
-		uint16_t temp_ntc = NTC_LUT[raw];
-		sct_value_point(temp_ntc, SEC_DEC_POINT);
+		if (HAL_GetTick() >= lastMeasTicks + CONVERT_T_DELAY) {
+			lastMeasTicks = HAL_GetTick();
 
+			// refresh DS18B20
+			OWReadTemperature(&temp_18b20);
+			OWConvertAll();
+			temp_18b20 /= 10; //rotate right one digit
+
+			// refresh ntc. temp
+			uint16_t raw = HAL_ADC_GetValue(&hadc);
+			temp_ntc = NTC_LUT[raw];
+		}
+
+		if (HAL_GetTick() >= lastDispTicks + DISP_T_REFRESH) {
+			lastDispTicks = HAL_GetTick();
+			switch (state) {
+				case NTC:
+					sct_value_point(temp_ntc, SEC_DEC_POINT);
+					HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1);
+					HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0);
+					break;
+
+				case DS18:
+				    sct_value_point(temp_18b20, SEC_DEC_POINT);
+				    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 0);
+					HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1);
+				default:
+					break;
+			}
+
+		}
+
+		if (read_buttons() == BUTTON_S2) { state = NTC; }
+		if (read_buttons() == BUTTON_S1) { state = DS18; }
 
 		/* USER CODE END WHILE */
 
