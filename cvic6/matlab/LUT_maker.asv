@@ -1,0 +1,29 @@
+clear all;
+close all;
+
+order = 20; %polynom order
+resolution = 1024; %12bit
+r1 = 10; %kOhm
+t = importfile("C:\Users\xvanek39\Documents\MKS\cvic6\matlab\ntc.csv", [1, Inf]);
+temp = t.temp;
+r = t.val;
+
+ad = (r)./(r+r1).*2^10;
+ad2 = 0:1023;
+
+
+poly = polyfit(ad, temp, 10);
+t2 = round(polyval(p, ad2), 1);
+
+figure(1)
+subplot(2,1,1)
+plot(temp_adc,'xr');
+hold on;
+grid on;
+xlabel("Temperature");
+ylabel("Resistivity");
+subplot(2,1,2)
+plot(temp_new, 'X');
+xlabel("ADC\_val");
+ylabel("Temp")
+
