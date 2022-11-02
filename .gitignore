@@ -6,3 +6,5 @@ Debug
 *.resources
 .metadata
 /cvic5/*.ld
+/cvic6/cvic6/*.ld
+/cvic6/cvic6/*.ioc
